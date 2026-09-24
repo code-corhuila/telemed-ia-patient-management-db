@@ -1,10 +1,9 @@
 -- =====================================================================
 -- TeleMed IA — Patient Management DEV/TEST Seed Data
 -- =====================================================================
--- NOTE: This file is NOT a Flyway migration. It is mounted by the local
---       docker-compose.yml into the PostgreSQL initialization directory
---       (docker-entrypoint-initdb.d), which only runs on first-time
---       database creation. It never runs in qa, staging, or production.
+-- NOTE: This file is NOT a Flyway migration. It is executed by the
+--       docker-compose `seed` service AFTER Flyway has created the
+--       schema. It never runs in qa, staging, or production.
 -- =====================================================================
 
 INSERT INTO patients (user_id, birth_date, phone, medical_history, description)
