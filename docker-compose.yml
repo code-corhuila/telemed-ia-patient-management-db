@@ -1,0 +1,38 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: telemed-patient-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: telemed_patient_db
+      POSTGRES_USER: telemed_patient_user
+      POSTGRES_PASSWORD: telemed_patient_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - telemed-patient-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U telemed_patient_user -d telemed_patient_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  flyway:
+    image: flyway/flyway:10-alpine
+    container_name: telemed-patient-flyway
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      -url=jdbc:postgresql://postgres:5432/telemed_patient_db
+      -user=telemed_patient_user
+      -password=telemed_patient_password
+      -locations=filesystem:/flyway/sql
+      -baselineOnMigrate=true
+      migrate
+    volumes:
+      - ./src/main/resources/db/migration:/flyway/sql:ro
+
+volumes:
+  telemed-patient-pgdata:
+    driver: local
