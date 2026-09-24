@@ -18,6 +18,12 @@ This repository uses three persistent branches:
 
 ## Workflow
 
+> **Review rule:** The team has adopted **2 approvals minimum** for Pull Requests
+> targeting `develop` and `qa` (the README describes this generically as "the team
+> sets its own review rule"; this file is the authoritative source of the specific
+> number). Pull Requests targeting `main` require **1 approval from `@ariel5253`**
+> as defined by `CODEOWNERS`.
+
 ### 1. Develop
 
 ```bash
