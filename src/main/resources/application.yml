@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: telemed-ia-patient-management-db
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    validate-on-migrate: true
+    clean-disabled: true
