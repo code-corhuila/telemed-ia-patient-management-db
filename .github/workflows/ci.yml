@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - develop
+      - qa
+      - main
+      - 'chore/**'
+      - 'feat/**'
+      - 'fix/**'
+      - 'release/**'
+      - 'qa/**'
+  pull_request:
+    branches:
+      - develop
+      - qa
+      - main
+
+env:
+  # Test-only credential for the ephemeral CI PostgreSQL container.
+  # NOT a production secret. Kept in a single place to avoid drift between
+  # the service definition and the Flyway invocation.
+  DB_NAME: telemed_patient_db
+  DB_USER: telemed_patient_user
+  DB_PASSWORD: telemed_patient_password
+
+jobs:
+  validate-migrations:
+    name: Validate Flyway migrations
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: ${{ env.DB_NAME }}
+          POSTGRES_USER: ${{ env.DB_USER }}
+          POSTGRES_PASSWORD: ${{ env.DB_PASSWORD }}
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ${{ env.DB_USER }} -d ${{ env.DB_NAME }}"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Verify Flyway plugin resolved configuration
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+        run: mvn --batch-mode help:evaluate -Dexpression=flyway.url -q -DforceStdout
+
+      - name: Run Flyway migrations
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+        run: mvn --batch-mode flyway:migrate
+
+      - name: Validate migration state
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+        run: mvn --batch-mode flyway:validate
