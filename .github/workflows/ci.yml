@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - develop
+      - qa
+      - main
+      - 'chore/**'
+      - 'feat/**'
+      - 'fix/**'
+      - 'release/**'
+      - 'qa/**'
+  pull_request:
+    branches:
+      - develop
+      - qa
+      - main
+
+jobs:
+  validate-migrations:
+    name: Validate Flyway migrations
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: telemed_patient_db
+          POSTGRES_USER: telemed_patient_user
+          POSTGRES_PASSWORD: telemed_patient_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U telemed_patient_user -d telemed_patient_db"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Run Flyway migrations
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: telemed_patient_db
+          DB_USER: telemed_patient_user
+          DB_PASSWORD: telemed_patient_password
+        run: mvn --batch-mode flyway:migrate
+
+      - name: Validate migration state
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: telemed_patient_db
+          DB_USER: telemed_patient_user
+          DB_PASSWORD: telemed_patient_password
+        run: mvn --batch-mode flyway:validate
