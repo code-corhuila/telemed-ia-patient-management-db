@@ -4,15 +4,18 @@ services:
     container_name: telemed-patient-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: telemed_patient_db
-      POSTGRES_USER: telemed_patient_user
-      POSTGRES_PASSWORD: telemed_patient_password
+      POSTGRES_DB: ${POSTGRES_DB:-telemed_patient_db}
+      POSTGRES_USER: ${POSTGRES_USER:-telemed_patient_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-telemed_patient_password}
     ports:
       - "5432:5432"
     volumes:
       - telemed-patient-pgdata:/var/lib/postgresql/data
+      # Seed scripts mounted into the Postgres init directory.
+      # They run ONLY on first-time database creation, never in qa/main.
+      - ./docker/db/seed:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U telemed_patient_user -d telemed_patient_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-telemed_patient_user} -d ${POSTGRES_DB:-telemed_patient_db}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -24,9 +27,9 @@ services:
       postgres:
         condition: service_healthy
     command: >
-      -url=jdbc:postgresql://postgres:5432/telemed_patient_db
-      -user=telemed_patient_user
-      -password=telemed_patient_password
+      -url=jdbc:postgresql://postgres:5432/${POSTGRES_DB:-telemed_patient_db}
+      -user=${POSTGRES_USER:-telemed_patient_user}
+      -password=${POSTGRES_PASSWORD:-telemed_patient_password}
       -locations=filesystem:/flyway/sql
       -baselineOnMigrate=true
       migrate
