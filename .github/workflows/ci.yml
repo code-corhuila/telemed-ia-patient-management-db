@@ -17,6 +17,14 @@ on:
       - qa
       - main
 
+env:
+  # Test-only credential for the ephemeral CI PostgreSQL container.
+  # NOT a production secret. Kept in a single place to avoid drift between
+  # the service definition and the Flyway invocation.
+  DB_NAME: telemed_patient_db
+  DB_USER: telemed_patient_user
+  DB_PASSWORD: telemed_patient_password
+
 jobs:
   validate-migrations:
     name: Validate Flyway migrations
@@ -26,13 +34,13 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_DB: telemed_patient_db
-          POSTGRES_USER: telemed_patient_user
-          POSTGRES_PASSWORD: telemed_patient_password
+          POSTGRES_DB: ${{ env.DB_NAME }}
+          POSTGRES_USER: ${{ env.DB_USER }}
+          POSTGRES_PASSWORD: ${{ env.DB_PASSWORD }}
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U telemed_patient_user -d telemed_patient_db"
+          --health-cmd "pg_isready -U ${{ env.DB_USER }} -d ${{ env.DB_NAME }}"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
@@ -48,20 +56,20 @@ jobs:
           java-version: '17'
           cache: maven
 
+      - name: Verify Flyway plugin resolved configuration
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+        run: mvn --batch-mode help:evaluate -Dexpression=flyway.url -q -DforceStdout
+
       - name: Run Flyway migrations
         env:
           DB_HOST: localhost
           DB_PORT: 5432
-          DB_NAME: telemed_patient_db
-          DB_USER: telemed_patient_user
-          DB_PASSWORD: telemed_patient_password
         run: mvn --batch-mode flyway:migrate
 
       - name: Validate migration state
         env:
           DB_HOST: localhost
           DB_PORT: 5432
-          DB_NAME: telemed_patient_db
-          DB_USER: telemed_patient_user
-          DB_PASSWORD: telemed_patient_password
         run: mvn --batch-mode flyway:validate
