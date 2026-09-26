@@ -1,0 +1,81 @@
+name: DB CI
+
+on:
+  pull_request:
+    branches: [develop, qa, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reconstruct:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: patients_test
+          POSTGRES_USER: patients_test
+          POSTGRES_PASSWORD: patients_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U patients_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      FLYWAY_URL: jdbc:postgresql://localhost:5432/patients_test
+      FLYWAY_USER: patients_test
+      FLYWAY_PASSWORD: patients_test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build schema from an empty database
+        run: |
+          docker run --rm --network host \
+            -v "$PWD:/workspace" -w /workspace \
+            -e FLYWAY_URL -e FLYWAY_USER -e FLYWAY_PASSWORD \
+            flyway/flyway:10.20.1 -configFiles=flyway.toml migrate
+
+      - name: Second migrate must apply nothing
+        run: |
+          docker run --rm --network host \
+            -v "$PWD:/workspace" -w /workspace \
+            -e FLYWAY_URL -e FLYWAY_USER -e FLYWAY_PASSWORD \
+            flyway/flyway:10.20.1 -configFiles=flyway.toml migrate \
+            | tee /tmp/out.txt
+          grep -q "No migration necessary" /tmp/out.txt
+
+      - name: Apply U scripts in reverse order
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client
+          for f in $(find 05_rollbacks -name "U*.sql" | sort -r); do
+            echo ">>> $f"
+            PGPASSWORD="$FLYWAY_PASSWORD" psql -h localhost -U "$FLYWAY_USER" -d patients_test \
+              -v ON_ERROR_STOP=1 -f "$f"
+          done
+
+      - name: Verify the domain schema was dropped
+        run: |
+          EXISTS=$(PGPASSWORD="$FLYWAY_PASSWORD" psql -h localhost -U "$FLYWAY_USER" -d patients_test \
+            -tAc "SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name = 'patients'")
+          if [ "$EXISTS" != "0" ]; then
+            echo "Schema 'patients' still exists after rollbacks"
+            exit 1
+          fi
+
+      - name: Re-apply from an empty state
+        run: |
+          PGPASSWORD="$FLYWAY_PASSWORD" psql -h localhost -U "$FLYWAY_USER" -d patients_test \
+            -c "DROP TABLE IF EXISTS flyway_schema_history;"
+          docker run --rm --network host \
+            -v "$PWD:/workspace" -w /workspace \
+            -e FLYWAY_URL -e FLYWAY_USER -e FLYWAY_PASSWORD \
+            flyway/flyway:10.20.1 -configFiles=flyway.toml migrate
