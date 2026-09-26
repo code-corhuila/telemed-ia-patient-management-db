@@ -34,7 +34,6 @@ services:
       - ./src/main/resources/db/migration:/flyway/sql:ro
 
   # Dev-only seed. Runs AFTER flyway has created the schema.
-  # Not part of the qa/main pipeline — only present in local docker-compose.
   seed:
     image: postgres:16-alpine
     container_name: telemed-patient-seed
@@ -45,15 +44,10 @@ services:
       PGPASSWORD: ${POSTGRES_PASSWORD:-telemed_patient_password}
     volumes:
       - ./docker/db/seed:/seed:ro
-    entrypoint: >
-      sh -c "
-        psql
-        -h postgres
-        -U ${POSTGRES_USER:-telemed_patient_user}
-        -d ${POSTGRES_DB:-telemed_patient_db}
-        -v ON_ERROR_STOP=1
-        -f /seed/01-dev-seed.sql
-      "
+    entrypoint:
+      - "sh"
+      - "-c"
+      - "psql -h postgres -U ${POSTGRES_USER:-telemed_patient_user} -d ${POSTGRES_DB:-telemed_patient_db} -v ON_ERROR_STOP=1 -f /seed/01-dev-seed.sql"
     restart: "no"
 
 volumes:
