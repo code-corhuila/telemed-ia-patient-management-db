@@ -34,8 +34,7 @@ services:
       - ./src/main/resources/db/migration:/flyway/sql:ro
 
   # Dev-only seed. Runs AFTER flyway has created the schema.
-  # Not part of the qa/main pipeline — only present in local docker-compose.
-    seed:
+  seed:
     image: postgres:16-alpine
     container_name: telemed-patient-seed
     depends_on:
