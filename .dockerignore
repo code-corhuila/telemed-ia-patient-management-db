@@ -1,7 +1,8 @@
 .git
-.gitignore
-.idea
-.vscode
+.github
+.env
+.env.*
+!.env.example
 *.md
-target/
-docs/
+05_rollbacks
+deploy

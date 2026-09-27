@@ -10,11 +10,6 @@
 *.ipr
 *.iws
 
-# Java / Maven
-target/
-!.mvn/wrapper/maven-wrapper.jar
-*.class
-
 # Logs
 *.log
 logs/
@@ -25,6 +20,7 @@ Thumbs.db
 
 # Docker
 *.pid
+*.pgdata/
 
 # Flyway
 flyway.conf
