@@ -1,0 +1,7 @@
+[flyway]
+locations = ["filesystem:01_ddl", "filesystem:02_dml", "filesystem:03_dcl", "filesystem:04_tcl"]
+validateMigrationNaming = true
+cleanDisabled = true
+
+[flyway.postgresql.transactional]
+lock = false
