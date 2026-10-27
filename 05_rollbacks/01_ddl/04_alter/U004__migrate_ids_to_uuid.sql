@@ -1,0 +1,15 @@
+-- =====================================================================
+-- Rollback: U004__migrate_ids_to_uuid.sql
+-- =====================================================================
+-- IMPORTANT: the uuid -> bigint reversal is not symmetric.
+-- A UUID cannot be converted back to bigint without losing information.
+-- This script only documents the reversal; it does not attempt it.
+--
+-- In dev, rebuild the schema manually:
+--   psql -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+--   then re-apply V001..V004 with Flyway.
+--
+-- flyway.cleanDisabled=true prevents `flyway clean`.
+-- =====================================================================
+
+-- No ALTER is executed here on purpose.
